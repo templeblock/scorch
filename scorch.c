@@ -220,7 +220,14 @@ void SCH_Linear_freeState(SCH_Layer *layer)
 void SCH_Linear_updateAddBuffer(SCH_Layer *layer,
                                THFloatTensor *input)
 {
-  
+  SCH_LinearState *state = (SCH_LinearState*)layer->state;
+
+  long nframe = input->size[0];
+  long nElement = THFloatTensor_nElement(state->addBuffer);
+  if (nElement != nframe) {
+    THFloatTensor_resize1d(state->addBuffer,nframe);
+    THFloatTensor_fill(state->addBuffer,1.0);
+  }
 }
 
 void SCH_Linear_updateOutput(SCH_Layer *layer,
