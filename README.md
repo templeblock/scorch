@@ -1,6 +1,6 @@
 # scorch
 
-A minimalistic deep learning library in C.
+A minimalistic deep learning library in C built on top of [TH](https://github.com/torch/torch7/tree/master/lib/TH) and [THNN](https://github.com/torch/nn/tree/master/lib/THNN).
 
 **UNDER CONSTRUCTION**
 
