@@ -3,6 +3,7 @@
 A no-frills deep learning library in C built on top of [TH](https://github.com/torch/torch7/tree/master/lib/TH) and [THNN](https://github.com/torch/nn/tree/master/lib/THNN).
 
 **UNDER CONSTRUCTION**
+Pre-alpha, don't use.
 
 ## Goals
 
