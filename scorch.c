@@ -58,7 +58,7 @@ void SCH_NetworkDelete(SCH_Network *net)
 }
 
 THFloatTensor *SCH_NetworkForward(SCH_Network *net,
-                                 THFloatTensor *input)
+                                  THFloatTensor *input)
 {
   THFloatTensor *output = input;
   for (int i=net->end-1; i>=0; i--) {
@@ -68,52 +68,52 @@ THFloatTensor *SCH_NetworkForward(SCH_Network *net,
 }
 
 THFloatTensor *SCH_NetworkBackward(SCH_Network *net,
-                                  THFloatTensor *input,
-                                  THFloatTensor *gradOutput,
-                                  float scale)
+                                   THFloatTensor *input,
+                                   THFloatTensor *gradOutput,
+                                   float scale)
 {
   THFloatTensor *gradInput = gradOutput;
   for (int i=net->end-1; i>=0; i--) {
     THFloatTensor *layerInput = i>0 ? net->layers[i-1]->output : input;
     gradInput = SCH_LayerBackward(net->layers[i],
-                                 layerInput,
-                                 gradInput,
-                                 scale);
+                                  layerInput,
+                                  gradInput,
+                                  scale);
   }
   return gradInput;
 }
 
 THFloatTensor *SCH_NetworkForwardWithLoss(SCH_Network *net,
-                                         THFloatTensor *input,
-                                         THFloatTensor *target)
+                                          THFloatTensor *input,
+                                          THFloatTensor *target)
 {
   THFloatTensor *output = SCH_NetworkForward(net,input);
   return SCH_LossForward(net->loss,output,target);
 }
 
 THFloatTensor *SCH_NetworkBackwardWithLoss(SCH_Network *net,
-                                          THFloatTensor *input,
-                                          THFloatTensor *target,
-                                          float scale)
+                                           THFloatTensor *input,
+                                           THFloatTensor *target,
+                                           float scale)
 {
   THFloatTensor *gradOutput = SCH_LossBackward(net->loss,
-                                              net->layers[net->end-1]->output,
-                                              target);
+                                               net->layers[net->end-1]->output,
+                                               target);
   return SCH_NetworkBackward(net,input,gradOutput,scale);
 }
 
 
 THFloatTensor *SCH_LayerForward(SCH_Layer *layer,
-                               THFloatTensor *input)
+                                THFloatTensor *input)
 {
   layer->updateOutput(layer,input);
   return layer->output;
 }
 
 THFloatTensor *SCH_LayerBackward(SCH_Layer *layer,
-                                THFloatTensor *input,
-                                THFloatTensor *gradOutput,
-                                float scale)
+                                 THFloatTensor *input,
+                                 THFloatTensor *gradOutput,
+                                 float scale)
 {
   layer->updateGradInput(layer,input,gradOutput);
   if (layer->accGradParameters) {
@@ -123,16 +123,16 @@ THFloatTensor *SCH_LayerBackward(SCH_Layer *layer,
 }
 
 THFloatTensor *SCH_LossForward(SCH_Loss *loss,
-                              THFloatTensor *input,
-                              THFloatTensor *target)
+                               THFloatTensor *input,
+                               THFloatTensor *target)
 {
   loss->updateOutput(loss,input,target);
   return loss->output;
 }
 
 THFloatTensor *SCH_LossBackward(SCH_Loss *loss,
-                               THFloatTensor *input,
-                               THFloatTensor *target)
+                                THFloatTensor *input,
+                                THFloatTensor *target)
 {
   loss->updateGradInput(loss,input,target);
   return loss->gradInput;
@@ -152,7 +152,7 @@ void SCH_ELU_freeState(SCH_Layer *layer)
 }
 
 void SCH_ELU_updateOutput(SCH_Layer *layer,
-                         THFloatTensor *input)
+                          THFloatTensor *input)
 {
   SCH_ELUState *state = (SCH_ELUState*)layer->state;
   THNN_FloatELU_updateOutput(NULL,
@@ -163,8 +163,8 @@ void SCH_ELU_updateOutput(SCH_Layer *layer,
 }
 
 void SCH_ELU_updateGradInput(SCH_Layer *layer,
-                            THFloatTensor *input,
-                            THFloatTensor *gradOutput)
+                             THFloatTensor *input,
+                             THFloatTensor *gradOutput)
 {
   SCH_ELUState *state = (SCH_ELUState*)layer->state;
   THNN_FloatELU_updateGradInput(NULL,
@@ -217,131 +217,51 @@ void SCH_Linear_freeState(SCH_Layer *layer)
   free(state);
 }
 
-void SCH_Linear_updateAddBuffer(SCH_Layer *layer,
-                               THFloatTensor *input)
-{
-  SCH_LinearState *state = (SCH_LinearState*)layer->state;
-
-  long nframe = input->size[0];
-  long nElement = THFloatTensor_nElement(state->addBuffer);
-  if (nElement != nframe) {
-    THFloatTensor_resize1d(state->addBuffer,nframe);
-    THFloatTensor_fill(state->addBuffer,1.0);
-  }
-}
-
 void SCH_Linear_updateOutput(SCH_Layer *layer,
-                            THFloatTensor *input)
+                             THFloatTensor *input)
 {
   SCH_LinearState *state = (SCH_LinearState*)layer->state;
-
-  THFloatTensor *output = layer->output;
-
-  long dim = input->nDimension;
-  if (dim == 1) {
-    THFloatTensor_resize1d(output,THFloatTensor_size(state->weight,1));
-    if (state->bias) {
-      THFloatTensor_copy(output,state->bias);
-    }
-    else {
-      THFloatTensor_zero(output);
-    }
-    THFloatTensor *dummy = THFloatTensor_newWithSize1d(state->weight->size[0]);
-    THFloatTensor_addmv(output,0,dummy,1,state->weight,input);
-    THFloatTensor_free(dummy);
-  }
-  else if (dim == 2) {
-    long nframe = THFloatTensor_size(input,1);
-    long nElement = THFloatTensor_nElement(output);
-    THFloatTensor_resize2d(output,nframe,THFloatTensor_size(state->weight,1));
-    if (THFloatTensor_nElement(output) != nElement) {
-      THFloatTensor_zero(output);
-    }
-    SCH_Linear_updateAddBuffer(layer,input);
-    THFloatTensor *weight_t = THFloatTensor_new();
-    THFloatTensor_transpose(weight_t,state->weight,0,1);
-    THFloatTensor_addmm(output,0,layer->output,1,input,weight_t);
-    if (state->bias) {
-      THFloatTensor *dummy = THFloatTensor_newWithSize2d(state->addBuffer->size[0],
-                                                         state->bias->size[0]);
-      THFloatTensor_addr(output,0,dummy,1,state->addBuffer,state->bias);
-      THFloatTensor_free(dummy);
-    }
-    THFloatTensor_free(weight_t);
-  }
+  THNN_FloatLinear_updateOutput(NULL,
+                                input,
+                                layer->output,
+                                state->weight,
+                                state->bias,
+                                state->addBuffer);
 }
 
 void SCH_Linear_updateGradInput(SCH_Layer *layer,
-                               THFloatTensor *input,
-                               THFloatTensor *gradOutput)
+                                THFloatTensor *input,
+                                THFloatTensor *gradOutput)
 {
   SCH_LinearState *state = (SCH_LinearState*)layer->state;
-
-  THFloatTensor *gradInput = layer->gradInput;
-  if (gradInput) {
-    long nElement = THFloatTensor_nElement(gradInput);
-    THFloatTensor_resizeAs(gradInput,input);
-    if (THFloatTensor_nElement(gradInput) != nElement) {
-      THFloatTensor_zero(gradInput);
-    }
-
-    long dim = input->nDimension;
-    if (dim == 1) {
-      THFloatTensor *weight_t = THFloatTensor_new();
-      THFloatTensor_transpose(weight_t,state->weight,0,1);
-      THFloatTensor *dummy = THFloatTensor_newWithSize1d(gradOutput->size[0]);
-      THFloatTensor_addmv(gradInput,0,dummy,1,weight_t,gradOutput);
-      THFloatTensor_free(weight_t);
-      THFloatTensor_free(dummy);
-    }
-    else if (dim == 2) {
-      THFloatTensor *dummy = THFloatTensor_newWithSize2d(gradOutput->size[0],
-                                                         state->weight->size[1]);
-      THFloatTensor_addmm(gradInput,0,dummy,1,gradOutput,state->weight);
-      THFloatTensor_free(dummy);
-    }
-  }
+  THNN_FloatLinear_updateGradInput(NULL,
+                                   input,
+                                   gradOutput,
+                                   layer->gradInput,
+                                   state->weight);
 }
 
 void SCH_Linear_accGradParameters(SCH_Layer *layer,
-                                 THFloatTensor *input,
-                                 THFloatTensor *gradOutput,
-                                 float scale)
+                                  THFloatTensor *input,
+                                  THFloatTensor *gradOutput,
+                                  float scale)
 {
   SCH_LinearState *state = (SCH_LinearState*)layer->state;
-
-  long dim = input->nDimension;
-
-  if (dim == 1) {
-    THFloatTensor *dummy = THFloatTensor_newWithSize2d(gradOutput->size[0],
-                                                       input->size[0]);
-    THFloatTensor_addr(state->gradWeight,0,dummy,scale,gradOutput,input);
-    THFloatTensor_free(dummy);
-    if (state->bias) {
-      THFloatTensor_add(state->gradBias,gradOutput,scale);
-    }
-  }
-  else if (dim == 2) {
-    THFloatTensor *gradOutput_t = THFloatTensor_new();
-    THFloatTensor_transpose(gradOutput_t,gradOutput,0,1);
-    THFloatTensor *dummy = THFloatTensor_newWithSize2d(gradOutput_t->size[0],
-                                                       input->size[1]);
-    THFloatTensor_addmm(state->gradWeight,0,dummy,scale,gradOutput_t,input);
-    THFloatTensor_free(dummy);
-    if (state->bias) {
-      SCH_Linear_updateAddBuffer(layer,input);
-      THFloatTensor *dummy = THFloatTensor_newWithSize1d(gradOutput_t->size[0]);
-      THFloatTensor_addmv(state->gradBias,0,dummy,scale,gradOutput_t,state->addBuffer);
-      THFloatTensor_free(dummy);
-    }
-    THFloatTensor_free(gradOutput_t);
-  }
-
+  THNN_FloatLinear_accGradParameters(NULL,
+                                     input,
+                                     gradOutput,
+                                     layer->gradInput,
+                                     state->weight,
+                                     state->bias,
+                                     state->gradWeight,
+                                     state->gradBias,
+                                     state->addBuffer,
+                                     scale);
 }
 
 SCH_Layer *SCH_LinearLayer(long inputSize,
-                         long outputSize,
-                         bool bias)
+                           long outputSize,
+                           bool bias)
 {
   SCH_LinearState *state = malloc(sizeof(SCH_LinearState));
   state->weight = THFloatTensor_newWithSize2d(outputSize,inputSize);
@@ -380,8 +300,8 @@ void SCH_MSELoss_freeState(SCH_Loss *loss)
 }
 
 void SCH_MSELoss_updateOutput(SCH_Loss *loss,
-                             THFloatTensor *input,
-                             THFloatTensor *target)
+                              THFloatTensor *input,
+                              THFloatTensor *target)
 {
   SCH_MSELossState *state = (SCH_MSELossState*)loss->state;
   if (loss->output->size == NULL) {
@@ -395,8 +315,8 @@ void SCH_MSELoss_updateOutput(SCH_Loss *loss,
 }
 
 void SCH_MSELoss_updateGradInput(SCH_Loss *loss,
-                                THFloatTensor *input,
-                                THFloatTensor *target)
+                                 THFloatTensor *input,
+                                 THFloatTensor *target)
 {
   SCH_MSELossState *state = (SCH_MSELossState*)loss->state;
   THNN_FloatMSECriterion_updateGradInput(NULL,
