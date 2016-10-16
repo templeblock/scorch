@@ -10,7 +10,7 @@ A no-frills deep learning library in C built on top of [TH](https://github.com/t
 * Be easily embeddable
 * Be easily bindable from high-level languages through FFI
 * Be biased towards speed over convenience
-* Allow building all main architectures
+* Allow building all major architectures
 
 ## Current
 
