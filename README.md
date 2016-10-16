@@ -1,8 +1,25 @@
 # scorch
 
-A minimalistic deep learning library in C built on top of [TH](https://github.com/torch/torch7/tree/master/lib/TH) and [THNN](https://github.com/torch/nn/tree/master/lib/THNN).
+A no-frills deep learning library in C built on top of [TH](https://github.com/torch/torch7/tree/master/lib/TH) and [THNN](https://github.com/torch/nn/tree/master/lib/THNN).
 
 **UNDER CONSTRUCTION**
+
+## Goals
+
+* Only require a C compiler
+* Be easily embeddable
+* Be easily bindable from high-level languages through FFI
+* Be biased towards speed over convenience
+* Allow building all main architectures
+
+## Current
+
+[ ] Create the main neural network API on a feed forward model, limited to float
+[ ] Contribute ports of modules from Lua to C upstream (THNN)
+[ ] Implement optimizers
+[ ] Extend to other neural network architectures
+[ ] Consider wrapping TH tensor API using a fat pointers approach to achieve polymorphism
+[ ] Implement sample models
 
 ## Build
 
