@@ -17,6 +17,7 @@ Pre-alpha, don't use.
 
 * [ ] Create the main neural network API on a feed forward model, limited to float
 * [ ] Contribute ports of modules from Lua to C upstream (THNN)
+  * Linear module: https://github.com/torch/nn/pull/1004
 * [ ] Implement optimizers
 * [ ] Extend to other neural network architectures
 * [ ] Consider wrapping TH tensor API using a fat pointers approach to achieve polymorphism
